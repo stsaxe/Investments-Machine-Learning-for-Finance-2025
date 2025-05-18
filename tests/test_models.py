@@ -32,6 +32,17 @@ class TestModels(unittest.TestCase):
         output = network(input)
         self.assertEqual(output.size(), (250, 3))
 
+        network = LSTM(num_features=1,
+                       output_size=3,
+                       num_LSTM_layers=5,
+                       num_hidden_layers=4,
+                       hidden_size=50
+                       )
+
+        input = torch.zeros(250, 1, 20, 1)
+        output = network(input)
+        self.assertEqual(output.size(), (250, 3))
+
     def test_CNN_model(self):
         window_size = 104
         features = 30

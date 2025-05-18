@@ -8,7 +8,6 @@ class Predictor(AbstractModelWrapper):
         self.check_model()
         self.check_device()
 
-        print(type(self.model))
         predictions = []
         targets = []
 

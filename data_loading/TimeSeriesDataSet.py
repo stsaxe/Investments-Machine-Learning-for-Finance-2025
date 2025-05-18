@@ -21,11 +21,13 @@ class TimeSeriesDataSet(torch.utils.data.Dataset):
 
         assert len(dataset) >= window_size + look_ahead + prediction_length - 1, ('dataset is too short for given '
                                                                                   'parameters')
-
-        assert type(max_val) == type(min_val), 'max and min must both be of same type'
+        assert not (not is_indexed and scale_target), 'targets can not be scaled when not indexed'
+        assert type(max_val) is type(min_val), 'max and min must both be of same type'
 
         assert not ((not is_indexed) and prediction_length > 1), ('for non-indexed targets the prediction length must '
-                                                                  'be 1')
+                                                      'be 1')
+        if scale_target is not None:
+            assert abs(scale_target) > 1e-8, 'scale target can not be zero'
 
         self.window_size = window_size
         self.look_ahead = look_ahead
@@ -65,6 +67,7 @@ class TimeSeriesDataSet(torch.utils.data.Dataset):
         return len(self.targets) - self.window_size - (self.look_ahead - 1) - (self.prediction_length - 1)
 
     def __getitem__(self, idx) -> tuple[torch.Tensor, torch.Tensor]:
+        assert 0 <= idx < len(self), 'index out of bounds'
         w = self.window_size
         l = self.look_ahead
         p = self.prediction_length
@@ -74,11 +77,12 @@ class TimeSeriesDataSet(torch.utils.data.Dataset):
         if self.is_indexed:
             target = self.targets[idx + w + l - 1:idx + w + l - 1 + p]
 
+            if self.scale_target is not None:
+                target = target / self.scale_target
+
         else:
             target = torch.prod(self.targets[idx + w:idx + w + l] + 1) - 1
-
-        if self.scale_target is not None:
-            target = target / self.scale_target
+            target = target.unsqueeze(-1)
 
         window = torch.cat([window, torch.zeros((self.window_size, self.padding))], dim=1)
 

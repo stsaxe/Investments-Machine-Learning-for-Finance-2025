@@ -51,7 +51,6 @@ class Test_TimeSeriesDataSet(unittest.TestCase):
         self.assertTrue(torch.allclose(x5, x5_solution, atol=1e-4))
         self.assertTrue(torch.allclose(t5, t5_solution, atol=1e-4))
 
-
         self.assertEqual(x0.size(), (1, 3, 2))
         self.assertEqual(t0.size(), torch.Size([2]))
 
@@ -90,6 +89,8 @@ class Test_TimeSeriesDataSet(unittest.TestCase):
         x0_solution = torch.tensor([[0, 20], [1, 18], [2, 16]]).float()
         t0_solution = torch.tensor([[(3 + 1) * (4 + 1) - 1]]).float()
 
+        self.assertEqual(t0.size(), torch.Size([1]))
+
         self.assertTrue(torch.allclose(x0, x0_solution, atol=1e-4))
         self.assertTrue(torch.allclose(t0, t0_solution, atol=1e-4))
 
@@ -117,3 +118,42 @@ class Test_TimeSeriesDataSet(unittest.TestCase):
 
         self.assertTrue(torch.allclose(x0, x0_solution, atol=1e-4))
         self.assertTrue(torch.allclose(t0, t0_solution, atol=1e-4))
+
+    def test_shape(self):
+        timeseries = TimeSeriesDataSet(dataset=self.dataframe,
+                                       window_size=2,
+                                       prediction_length=4,
+                                       look_ahead=1,
+                                       target_column=self.target,
+                                       date_column=self.date,
+                                       max_val=None,
+                                       min_val=None,
+                                       fixed_feature_size=5,
+                                       )
+
+        loader = torch.utils.data.DataLoader(timeseries, batch_size=3)
+
+        for i, (x, t) in enumerate(loader):
+            if i == 0:
+                self.assertEqual(x.size(), (3, 1, 2, 5))
+                self.assertEqual(t.size(), (3, 4))
+
+        timeseries = TimeSeriesDataSet(dataset=self.dataframe,
+                                       window_size=2,
+                                       prediction_length=1,
+                                       look_ahead=1,
+                                       target_column=self.target,
+                                       date_column=self.date,
+                                       max_val=None,
+                                       min_val=None,
+                                       fixed_feature_size=5,
+                                       is_indexed=False
+                                       )
+
+        loader = torch.utils.data.DataLoader(timeseries, batch_size=3)
+
+        for i, (x, t) in enumerate(loader):
+            if i == 0:
+                self.assertEqual(x.size(), (3, 1, 2, 5))
+                self.assertEqual(t.size(), (3, 1))
+

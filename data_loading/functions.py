@@ -100,7 +100,7 @@ def split_dataset(dataset: pd.DataFrame,
                                   date_column=date_column,
                                   is_indexed=is_indexed,
                                   scale_target=scaling,
-                                  fixed_feature_size = fixed_feature_size)
+                                  fixed_feature_size=fixed_feature_size)
 
     max_val, min_val = train_set.max, train_set.min
 
@@ -114,7 +114,7 @@ def split_dataset(dataset: pd.DataFrame,
                                 max_val=max_val,
                                 min_val=min_val,
                                 scale_target=scaling,
-                                fixed_feature_size = fixed_feature_size)
+                                fixed_feature_size=fixed_feature_size)
 
     test_set = TimeSeriesDataSet(dataset=data_test,
                                  window_size=window_size,
@@ -126,7 +126,7 @@ def split_dataset(dataset: pd.DataFrame,
                                  max_val=max_val,
                                  min_val=min_val,
                                  scale_target=scaling,
-                                 fixed_feature_size = fixed_feature_size)
+                                 fixed_feature_size=fixed_feature_size)
 
     assert len(train_set) + len(val_set) + len(test_set) + window_size + look_ahead - 1 + prediction_length - 1 == len(
         dataset)

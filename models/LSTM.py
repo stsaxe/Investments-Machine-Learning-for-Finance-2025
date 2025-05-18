@@ -10,7 +10,7 @@ class LSTM(torch.nn.Module):
                  num_LSTM_layers: int = 3,
                  num_hidden_layers: int = 2,
                  hidden_size: int = 100,
-                 dropout: int = 0.1):
+                 dropout: float = 0.1):
         super().__init__()
 
         self.lstm = torch.nn.LSTM(input_size=num_features,
@@ -26,7 +26,7 @@ class LSTM(torch.nn.Module):
 
     def forward(self, x):
         # removes the channel dimension as it is not needed
-        x = x.squeeze()
+        x = x.squeeze(dim=1)
 
         out, (final_hidden_state, final_cell_state) = self.lstm(x)
 

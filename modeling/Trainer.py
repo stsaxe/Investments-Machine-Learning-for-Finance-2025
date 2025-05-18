@@ -81,7 +81,8 @@ class Trainer(AbstractModelWrapper):
     def train(self,
               train_loader: torch.utils.data.DataLoader,
               validation_loader: torch.utils.data.DataLoader = None,
-              print_out: bool = True
+              print_out: bool = True,
+              return_loss: bool = False
               ) -> Self:
 
         self.check_model()
@@ -128,4 +129,9 @@ class Trainer(AbstractModelWrapper):
 
         torch.cuda.empty_cache()
 
-        return self.model
+        if return_loss:
+            return copy.deepcopy(self.model), all_loss
+        else:
+            return copy.deepcopy(self.model)
+
+
