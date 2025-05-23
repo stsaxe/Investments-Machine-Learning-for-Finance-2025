@@ -1,9 +1,13 @@
+import copy
 from abc import abstractmethod, ABC
+from queue import Queue
 from typing import Self
+
+import numpy as np
 import pandas as pd
 import torch.utils.data
+from sklearn.linear_model import LinearRegression
 from typing_extensions import override
-
 
 from data_loading import split_dataset, create_dataloaders
 from feature_search.ModelConfig import ModelConfigCNN
@@ -14,7 +18,6 @@ from models.CNN import CNN
 
 class AbstractSearchNode(ABC):
     def __init__(self, data: pd.DataFrame,
-                 features: list[str],
                  selection: list[str],
                  model_trainer: Trainer,
                  target_column: str,
@@ -22,10 +25,10 @@ class AbstractSearchNode(ABC):
                  model_config: ModelConfigCNN,
                  split_config: SplitConfig,
                  num_iterations: int = 1,
+                 max_children: int = None,
                  parent: Self = None):
 
         self.data = data
-        self.features = features
         self.selection = selection
         self.target = target_column
         self.date_column = date_column
@@ -36,14 +39,14 @@ class AbstractSearchNode(ABC):
         self.children = None
         self.num_iterations = num_iterations
         self.model_config = model_config
+        self.children_queue = None
+        self.max_children = max_children
 
         assert split_config.window_size == model_config.window_size
         assert split_config.prediction_length == model_config.output_size
 
         assert target_column not in selection
         assert date_column not in selection
-        assert date_column not in features
-        assert target_column not in features
 
     def get_depth(self) -> int:
         if self.parent is None:
@@ -54,6 +57,25 @@ class AbstractSearchNode(ABC):
     @abstractmethod
     def generate_children(self) -> list[Self]:
         pass
+
+    def has_next_child(self) -> bool:
+        return self.get_children_queue().qsize() > 0
+
+    def get_children_queue(self) -> Queue:
+        if self.children_queue is None:
+            children = self.get_children()
+            self.children_queue = Queue()
+
+            for child in children:
+                self.children_queue.put(child)
+
+        return self.children_queue
+
+    def next_child(self) -> Self | None:
+        if self.has_next_child():
+            return self.children_queue.get()
+        else:
+            return None
 
     def get_children(self) -> list[Self]:
         if self.children is None:
@@ -96,7 +118,45 @@ class AbstractSearchNode(ABC):
 
         return train, val
 
-    def __compute_heuristic(self) -> float:
+    def find_elbow_point(self, data):
+        """
+        Finds the elbow point from a list of numbers using the maximum distance method.
+
+        Parameters:
+            data (list or np.ndarray): The y-values of your curve.
+
+        Returns:
+            int: The index of the elbow point.
+        """
+        # Create an array of (x, y) points where x is the index
+        n_points = len(data)
+        all_points = np.column_stack((np.arange(n_points), data))
+
+        # Line from first to last point
+        first_point = all_points[0]
+        last_point = all_points[-1]
+
+        # Compute the normalized vector of the line
+        line_vec = last_point - first_point
+        line_vec_norm = line_vec / np.linalg.norm(line_vec)
+
+        # Compute distances from each point to the line
+        distances = []
+        for point in all_points:
+            # Vector from the first point to the current point
+            vec_from_first = point - first_point
+            # Projection scalar of vec_from_first onto the normalized line vector
+            proj_length = np.dot(vec_from_first, line_vec_norm)
+            proj_point = first_point + proj_length * line_vec_norm
+            # Calculate the perpendicular distance
+            distance = np.linalg.norm(point - proj_point)
+            distances.append(distance)
+
+        # The elbow is the point with maximum distance
+        elbow_index = np.argmax(distances)
+        return elbow_index
+
+    def __compute_heuristic(self) -> tuple[float, float, float]:
         train, val = self.__generate_data_loaders()
 
         all_loss_values = []
@@ -105,25 +165,31 @@ class AbstractSearchNode(ABC):
             self.model_trainer.model = self.__model_factory()
             _, loss_values = self.model_trainer.train(train, val, return_loss=True, print_out=False)
 
-            min_value = min([v[1] for v in loss_values])
+            values_train = [v[0] for v in loss_values]
+            values_validation = [v[1] for v in loss_values]
 
-            print(min_value)
+            #log_values_train = [np.log10(i) for i in values_train]
 
-            all_loss_values.append(min_value)
+            ellbow_point = self.find_elbow_point(values_train)
+            epochs = self.model_trainer.epochs
+            selected_point = min(epochs, int(ellbow_point + 0.1 * epochs))
 
-        return float(sum(all_loss_values) / self.num_iterations)
+            value = values_validation[int(selected_point)]
 
-    def get_heuristic(self) -> float:
+            all_loss_values.append(value)
+
+        all_loss_values = np.array(all_loss_values)
+
+        return float(all_loss_values.mean()), float(all_loss_values.std()), float(np.median(all_loss_values))
+
+    def get_heuristic(self) -> tuple[float, float, float]:
         if self.h is None:
             self.h = self.__compute_heuristic()
 
         return self.h
 
     def __lt__(self, other):
-        return self.get_heuristic() < other.get_heuristic()
-
-    def __hash__(self):
-        return hash(self.selection)
+        return self.get_heuristic()[2] < other.get_heuristic()[2]
 
     def __eq__(self, other):
         return set(self.selection) == set(other.selection)
@@ -131,44 +197,53 @@ class AbstractSearchNode(ABC):
 
 class SearchNodeAdding(AbstractSearchNode):
 
-    def __ordered_expansion(self, remaining_features: list):
-        assert self.date_column not in remaining_features
-        assert self.target not in remaining_features
+    def ordered_expansion(self):
+        idx = int(len(self.data) * (1 - self.split_config.test_split - self.split_config.val_split))
 
-        l = len(self.data) * (1 - self.split_config.test_split - self.split_config.val_split)
+        temp = self.data.iloc[:idx, :].copy(deep=True)
 
-        temp = self.data[remaining_features + [self.target]]
+        temp['Target'] = temp[self.target].shift(self.split_config.look_ahead)
+        temp.dropna(axis=0, inplace=True)
 
-        corr_matrix = temp.iloc[:int(l), :].corr()
+        Y = temp['Target']
+        X = temp[[self.target] + self.selection]
 
-        corr_target_column = corr_matrix[[self.target]].sort_values(by=self.target,
-                                                                    ascending=False,
-                                                                    key=lambda x: abs(x))
+        linear_model = LinearRegression(fit_intercept=True)
+        linear_model.fit(X, Y)
+        residuals = list(Y - linear_model.predict(X))
 
-        corr_target_column.drop(self.target, axis=0, inplace=True)
+        temp.drop(self.selection + ['Target', self.target, self.date_column], axis=1, inplace=True)
+        temp['Residuals'] = residuals
 
-        return corr_target_column.index.tolist()
+        corr_matrix = temp.corr()
+        corr_resid_column = corr_matrix[['Residuals']].sort_values(by='Residuals',
+                                                                   ascending=False,
+                                                                   key=lambda i: abs(i))
+        corr_resid_column.drop("Residuals", axis=0, inplace=True)
+
+        return corr_resid_column.index.tolist()
 
     @override
     def generate_children(self) -> list[Self]:
         children = []
 
-        _ = self.get_heuristic()
+        _, _, _ = self.get_heuristic()
 
-        remaining_features = list(set(self.features) - set(self.selection))
+        feature_ordering = self.ordered_expansion()
 
-        ordering = self.__ordered_expansion(remaining_features)
+        if self.max_children is not None:
+            feature_ordering = feature_ordering[:self.max_children]
 
-        for feature in ordering:
+        for feature in feature_ordering:
             new_node = SearchNodeAdding(data=self.data,
-                                        features=self.features,
                                         selection=self.selection + [feature],
-                                        model_trainer=self.model_trainer,
+                                        model_trainer=copy.deepcopy(self.model_trainer),
                                         target_column=self.target,
                                         date_column=self.date_column,
                                         split_config=self.split_config,
                                         num_iterations=self.num_iterations,
                                         parent=self,
+                                        max_children=self.max_children,
                                         model_config=self.model_config)
 
             children.append(new_node)

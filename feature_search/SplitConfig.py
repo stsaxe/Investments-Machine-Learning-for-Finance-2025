@@ -7,7 +7,7 @@ class SplitConfig:
                  test_split: float,
                  is_indexed: bool,
                  scale_target: bool,
-                 fixed_feature_size: int,
+                 fixed_feature_size: int | None,
                  batch_size: int):
 
         self.window_size = window_size

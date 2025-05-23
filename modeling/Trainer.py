@@ -82,7 +82,8 @@ class Trainer(AbstractModelWrapper):
               train_loader: torch.utils.data.DataLoader,
               validation_loader: torch.utils.data.DataLoader = None,
               print_out: bool = True,
-              return_loss: bool = False
+              return_loss: bool = False,
+              return_all_networks: bool = False
               ) -> Self:
 
         self.check_model()
@@ -98,10 +99,14 @@ class Trainer(AbstractModelWrapper):
 
         best_loss = float('inf')
         all_loss = []
+        all_networks = []
 
         for epoch in range(1, 1 + self.epochs):
 
             optimizer, train_loss = self.__train_epoch(network, train_loader, optimizer)
+
+            if return_all_networks:
+                all_networks.append(copy.deepcopy(network).to(torch.device('cpu')))
 
             if print_out:
                 print(f"Epoch {epoch}; train loss: {round(train_loss, 5)}")
@@ -130,8 +135,14 @@ class Trainer(AbstractModelWrapper):
         torch.cuda.empty_cache()
 
         if return_loss:
-            return copy.deepcopy(self.model), all_loss
+            if return_all_networks:
+                return all_networks, all_loss
+            else:
+                return copy.deepcopy(self.model), all_loss
         else:
-            return copy.deepcopy(self.model)
+            if return_all_networks:
+                return all_networks
+            else:
+                return copy.deepcopy(self.model)
 
 
