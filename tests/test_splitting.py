@@ -24,7 +24,7 @@ class TestSplitting(unittest.TestCase):
 
         self.dataframe = self.dataframe.sample(frac=1)
 
-    def test_base(self):
+    def test_splitting(self):
         train, val, test = split_dataset(self.dataframe,
                                          window_size=5,
                                          prediction_length=4,

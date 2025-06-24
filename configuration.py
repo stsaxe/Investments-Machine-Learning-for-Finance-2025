@@ -1,6 +1,8 @@
 import torch
 import os
 
+# This file configures global variables. Be careful when changing these!
+
 dir_path = os.path.dirname(os.path.realpath(__file__))  # path of configuration file
 
 data_path = dir_path + r"/data/market_data_csv.csv"
@@ -10,7 +12,7 @@ dpi_display = 100  # dpi for plotting to console
 dpi_store = 200  # dpi for storing the plots
 
 fig_size = (16, 9)  # measured in inch
-font_size = 10
+font_size = 15
 font_size_title = 20
 
 date_column = 'Date'

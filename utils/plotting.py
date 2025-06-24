@@ -1,6 +1,8 @@
 import pandas as pd
 from matplotlib import pyplot as plt
 import seaborn as sns
+from matplotlib.ticker import PercentFormatter
+
 import configuration
 
 
@@ -9,8 +11,8 @@ def plot_column(dataset: pd.DataFrame, column: str, title: str, y_label: str, ou
     plt.figure(figsize=configuration.fig_size, dpi=configuration.dpi_display)
     plt.plot(dataset[date_column], dataset[column])
     plt.title(title, fontsize=configuration.font_size_title)
-    plt.xlabel('Date')
-    plt.ylabel(y_label)
+    plt.xlabel('Date', fontsize=configuration.font_size)
+    plt.ylabel(y_label, fontsize=configuration.font_size)
     plt.tight_layout()
     plt.ylim(bottom=dataset[column].min())
     plt.xlim(left=dataset[date_column].min())
@@ -22,8 +24,8 @@ def plot_column(dataset: pd.DataFrame, column: str, title: str, y_label: str, ou
 def plot_correlation_matrix(matrix: pd.DataFrame, title: str, output_path: str) -> None:
     plt.figure(figsize=(10, 8), dpi=configuration.dpi_display)
     sns.heatmap(matrix, annot=False, cmap='coolwarm', linewidths=0.5)
-    plt.yticks(fontsize=10)
-    plt.xticks(fontsize=10)
+    plt.yticks(fontsize=configuration.font_size)
+    plt.xticks(fontsize=configuration.font_size)
     plt.title(title, fontsize=configuration.font_size_title)
     plt.tight_layout()
     plt.savefig(output_path + title, dpi=configuration.dpi_store * 2)
@@ -31,39 +33,84 @@ def plot_correlation_matrix(matrix: pd.DataFrame, title: str, output_path: str) 
     print("\n")
 
 
-def plot_prediction_indexed(preds: list, targets: list, title: str, output_path: str) -> None:
-    x = range(len(targets))
+def plot_loss_curve(loss_train: list[float], loss_val: list[float], title: str, output_path: str) -> None:
+    assert len(loss_train) == len(loss_val)
+
+    x = range(1, 1 + len(loss_train))
 
     plt.figure(figsize=configuration.fig_size, dpi=configuration.dpi_display)
-    plt.plot(x, targets, color='blue', label='Targets')
-    plt.plot(x, preds, color='orange', label='Predictions')
-    plt.legend()
-    plt.title(title)
+    plt.plot(x, loss_train, color='blue', label='Training')
+    plt.plot(x, loss_val, color='orange', label='Validation')
+    plt.yscale("log")
+    plt.title(title, fontsize=configuration.font_size_title)
+    plt.xlabel("Epochs", fontsize=configuration.font_size)
+    plt.ylabel("Loss", fontsize=configuration.font_size)
+    plt.xlim(left=1)
+    plt.legend(loc='upper right', fontsize=configuration.font_size)
     plt.tight_layout()
     plt.savefig(output_path + title, dpi=configuration.dpi_store * 2)
     plt.show()
 
 
-def plot_prediction_returns(preds: list, targets: list, title: str, look_ahead: int, output_path: str) -> None:
-    chart_values = [100 for i in range(look_ahead)]
-    chart_preds = [100 for i in range(look_ahead)]
+def plot_prediction_indexed(preds: list, targets: list, dates: list, title: str, output_path: str) -> None:
+    plt.figure(figsize=configuration.fig_size, dpi=configuration.dpi_display)
+    plt.plot(dates, targets, color='blue', label='Targets')
+    plt.plot(dates, preds, color='orange', label='Predictions')
+    plt.legend(loc='upper left', fontsize=configuration.font_size)
+    plt.title(title, fontsize=configuration.font_size_title)
+    plt.xlabel("Date", fontsize=configuration.font_size)
+    plt.ylabel("Index", fontsize=configuration.font_size)
+    plt.xlim(left=dates[0])
+    plt.tight_layout()
+    plt.savefig(output_path + title, dpi=configuration.dpi_store * 2)
+    plt.show()
+
+
+def plot_prediction_returns(preds: list, targets: list, dates: list, initial_values: list[float], look_ahead: int,
+                            title: str,
+                            output_path: str, ) -> None:
+    assert len(initial_values) == look_ahead
+
+    targets_idx = initial_values
+    preds_idx = []
 
     for r in targets:
-        chart_values.append(chart_values[-look_ahead] * (1 + r))
+        targets_idx.append(targets_idx[-look_ahead] * (1 + r))
 
-    for i, p in enumerate(preds):
-        chart_preds.append(chart_values[i] * (1 + p))
+    for i, r in enumerate(preds):
+        preds_idx.append(targets_idx[i] * (1 + r))
 
-    chart_preds = chart_preds[look_ahead:]
-    chart_values = chart_values[look_ahead:]
+    targets_idx = targets_idx[look_ahead:]
 
-    x = range(len(targets))
+    assert len(targets_idx) == len(preds_idx)
+    assert len(targets_idx) == len(dates)
+
+    plot_prediction_indexed(preds_idx, targets_idx, dates=dates, title=title, output_path=output_path)
+
+
+def plot_feature_importance(labels: list[str], sizes: list[float], title: str, output_path: str) -> None:
+    plt.figure(figsize=configuration.fig_size, dpi=configuration.dpi_display)
+    plt.barh(labels[::-1], sizes[::-1])
+    plt.gca().xaxis.set_major_formatter(PercentFormatter())
+    plt.xlim(left=0, right=110)
+    plt.title(title, fontsize=configuration.font_size_title)
+    plt.yticks(fontsize=configuration.font_size)
+    plt.xticks(fontsize=configuration.font_size)
+    plt.tight_layout()
+    plt.savefig(output_path + title, dpi=configuration.dpi_store * 2)
+    plt.show()
+
+
+def plot_return_density(preds: list[float], targets: list[float], title: str, output_path: str) -> None:
+    preds = [i * 100 for i in preds]
+    targets = [i * 100 for i in targets]
 
     plt.figure(figsize=configuration.fig_size, dpi=configuration.dpi_display)
-    plt.plot(x, chart_values, color='blue', label='Targets')
-    plt.plot(x, chart_preds, color='orange', label='Predictions')
-    plt.legend()
-    plt.title(title)
+    plt.hist(targets, bins=15, histtype='step', color='blue', density=True, label='Targets')
+    plt.hist(preds, bins=15, histtype='step', color='orange', density=True, label='Predictions')
+    plt.title(title, fontsize=configuration.font_size_title)
+    plt.gca().xaxis.set_major_formatter(PercentFormatter())
+    plt.legend(loc='upper right')
     plt.tight_layout()
     plt.savefig(output_path + title, dpi=configuration.dpi_store * 2)
     plt.show()

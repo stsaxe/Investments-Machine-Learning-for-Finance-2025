@@ -119,15 +119,6 @@ class AbstractSearchNode(ABC):
         return train, val
 
     def find_elbow_point(self, data):
-        """
-        Finds the elbow point from a list of numbers using the maximum distance method.
-
-        Parameters:
-            data (list or np.ndarray): The y-values of your curve.
-
-        Returns:
-            int: The index of the elbow point.
-        """
         # Create an array of (x, y) points where x is the index
         n_points = len(data)
         all_points = np.column_stack((np.arange(n_points), data))
@@ -165,16 +156,15 @@ class AbstractSearchNode(ABC):
             self.model_trainer.model = self.__model_factory()
             _, loss_values = self.model_trainer.train(train, val, return_loss=True, print_out=False)
 
-            values_train = [v[0] for v in loss_values]
-            values_validation = [v[1] for v in loss_values]
-
-            #log_values_train = [np.log10(i) for i in values_train]
+            values_train = np.array([v[0] for v in loss_values])
+            values_validation = np.array([v[1] for v in loss_values])
 
             ellbow_point = self.find_elbow_point(values_train)
-            epochs = self.model_trainer.epochs
-            selected_point = min(epochs, int(ellbow_point + 0.1 * epochs))
 
-            value = values_validation[int(selected_point)]
+            epochs = self.model_trainer.epochs
+            selected_point = int(min(ellbow_point + 0.2 * epochs, epochs))
+
+            value = values_validation[selected_point]
 
             all_loss_values.append(value)
 

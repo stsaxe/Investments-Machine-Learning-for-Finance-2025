@@ -47,8 +47,10 @@ def split_dataset(dataset: pd.DataFrame,
                   scale_target: bool = False,
                   fixed_feature_size: int = None,
                   time_step_size: int = configuration.time_step_size,
-                  time_step_unit: str = configuration.time_step_unit
-                  ) -> tuple[TimeSeriesDataSet, TimeSeriesDataSet, TimeSeriesDataSet]:
+                  time_step_unit: str = configuration.time_step_unit,
+                  return_split_dates: bool = False
+                  ) -> tuple[TimeSeriesDataSet, TimeSeriesDataSet, TimeSeriesDataSet] | tuple[
+    TimeSeriesDataSet, TimeSeriesDataSet, TimeSeriesDataSet, pd.Timestamp, pd.Timestamp, pd.Timestamp, pd.Timestamp]:
     assert window_size >= 1
     assert prediction_length >= 1
     assert look_ahead >= 1
@@ -131,7 +133,11 @@ def split_dataset(dataset: pd.DataFrame,
     assert len(train_set) + len(val_set) + len(test_set) + window_size + look_ahead - 1 + prediction_length - 1 == len(
         dataset)
 
-    return train_set, val_set, test_set
+    if return_split_dates:
+        return train_set, val_set, test_set, validation_split, validation_split_shifted, test_split, test_split_shifted
+
+    else:
+        return train_set, val_set, test_set
 
 
 def create_dataloaders(train_set: TimeSeriesDataSet,
