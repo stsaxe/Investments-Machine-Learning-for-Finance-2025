@@ -10,7 +10,7 @@ This repository is structured as follows:
 dataset class for time series regression
 - **feature_search**: the implementation of the heuristic feature selection algorithm based on greedy best-first search
 - **modeling**: helper classes for training of models and inference
-- **models**: contains the custom pytorch implementations of an MLP, a CNN, an LSTM and a Transformer.
+- **models**: contains the custom pytorch implementations of an MLP, a CNN, an LSTM and a Transformer (not used in the paper)
 - **notebooks**: various Jupyter notebooks that generate the main artifacts of this project 
   - *data_analysis*: basic data analysis and exploration of the provided dataset
   - *feature_selection*: implementation and execution of the feature selection algorithm 
