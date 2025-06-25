@@ -2,7 +2,7 @@
 
 
 This is the repository for the group project of Alexander Jean-Marc Fuchser, Daniel Eymann 
-and Stefan Richard Saxer for the course "Investments – Selected Quantitative Tools" at UZH in spring 2025.
+and Stefan Richard Saxer created for the course "Investments – Selected Quantitative Tools" at UZH in spring 2025.
 
 This repository is structured as follows:
 - **data**: contains the provided dataset converted from xlsx to csv
