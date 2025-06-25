@@ -110,7 +110,7 @@ def plot_return_density(preds: list[float], targets: list[float], title: str, ou
     plt.hist(preds, bins=15, histtype='step', color='orange', density=True, label='Predictions')
     plt.title(title, fontsize=configuration.font_size_title)
     plt.gca().xaxis.set_major_formatter(PercentFormatter())
-    plt.legend(loc='upper right')
+    plt.legend(loc='upper right', fontsize=configuration.font_size)
     plt.tight_layout()
     plt.savefig(output_path + title, dpi=configuration.dpi_store * 2)
     plt.show()
