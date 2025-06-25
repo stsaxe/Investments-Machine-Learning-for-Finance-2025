@@ -66,7 +66,7 @@ class TimeSeriesDataSet(torch.utils.data.Dataset):
             assert fixed_feature_size >= self.data.shape[1]
             self.padding = fixed_feature_size - self.data.shape[1]
 
-    def get_target_dates(self):
+    def get_target_dates(self) -> list[pd.Timestamp]:
         w = self.window_size
         l = self.look_ahead
         p = self.prediction_length
