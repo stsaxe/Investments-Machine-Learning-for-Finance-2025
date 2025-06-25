@@ -114,3 +114,14 @@ def plot_return_density(preds: list[float], targets: list[float], title: str, ou
     plt.tight_layout()
     plt.savefig(output_path + title, dpi=configuration.dpi_store * 2)
     plt.show()
+
+
+def plot_scatter(x: list[float], y: list[float], xlabel: str, ylabel: str, title: str, output_path: str) -> None:
+    plt.figure(figsize=configuration.fig_size, dpi=configuration.dpi_display)
+    plt.scatter(x, y)
+    plt.title(title, fontsize=configuration.font_size_title)
+    plt.xlabel(xlabel, fontsize=configuration.font_size)
+    plt.ylabel(ylabel, fontsize=configuration.font_size)
+    plt.tight_layout()
+    plt.savefig(output_path + title, dpi=configuration.dpi_store * 2)
+    plt.show()

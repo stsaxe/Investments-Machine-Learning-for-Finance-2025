@@ -30,3 +30,5 @@ validation_split = 0.2  # 20%
 batch_size = 250  # can be adjusted, but should not be too small for good performance
 
 random_seed = 1234
+
+risk_free_rate = 0.0  # this is the return of the risk-free rate in decimal (and not percent)
