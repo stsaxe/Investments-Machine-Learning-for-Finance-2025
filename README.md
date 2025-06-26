@@ -21,4 +21,8 @@ This repository is structured as follows:
 - **utils**: utility functions, mostly used for plotting
 - **configuration.py**: a configuration file that defines global variables for the project
 
-Please note that this project requires at least Python Version **3.11** or later for execution. 
+ This project requires at least Python Version **3.11** or later for execution. 
+ 
+**Important Note**: The weight initialization of PyTorch is random when using GPU acceleration via CUDA. 
+This weight initialization can **not** be made deterministic via a fixed random seed. Therefore, some of the results are not one-to-one 
+reproducible. 
